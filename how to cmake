@@ -1,0 +1,6 @@
+cmake makes the makefile for project based on CMaeklist.txt
+
+cmake -S <path to source> -B <path to build>
+
+https://www.ravbug.com/tutorials/cmake-easy/
+

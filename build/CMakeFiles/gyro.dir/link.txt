@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/gyro.dir/src/server.cpp.o -o gyro  /usr/local/lib/libmatplot.a /usr/local/lib/Matplot++/libnodesoup.a 
