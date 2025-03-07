@@ -1,4 +1,5 @@
 #include <stdio.h> // standard input and output library
+#include <bits/stdc++.h> 
 #include <stdlib.h> // this includes functions regarding memory allocation
 #include <string.h> // contains string functions
 #include <errno.h> //It defines macros for reporting and retrieving error conditions through error codes
@@ -12,28 +13,42 @@
 #include <matplot/matplot.h>
 #include <random>
 
-
 using namespace matplot;
+
+#define SERVPORT 8000
+#define CLIENTPORT 80 
 
 float range_convert(float oldval, float oldmin, float oldmax, float newmin, float newmax){
     return (((oldval - oldmin) * (newmax - newmin)) / (oldmax - oldmin)) + newmin;
 }
 
 int main(){
-    printf("begin\n");
+    printf("startung udp");
+    struct sockaddr_in servaddr,cliaddr;
+    int servsock;
 
-    int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if ( (servsock = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
+        perror("socket creation failed"); 
+        exit(EXIT_FAILURE); 
+    } 
 
-    sockaddr_in serverAddress;
-    serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(80);
-    serverAddress.sin_addr.s_addr = INADDR_ANY;
-    const char *ip = "10.160.0.225"; 
-    inet_pton(AF_INET, ip, &serverAddress.sin_addr);
+    memset(&servaddr, 0, sizeof(servaddr)); 
+    memset(&cliaddr, 0, sizeof(cliaddr)); 
 
-    connect(clientSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
+    servaddr.sin_family    = AF_INET; // IPv4 
+    servaddr.sin_addr.s_addr = INADDR_ANY; 
+    servaddr.sin_port = htons(SERVPORT); 
 
-    printf("starting client\n");
+    // Bind the socket with the server address 
+    if ( bind(servsock, (const struct sockaddr *)&servaddr,  
+            sizeof(servaddr)) < 0 ) 
+    { 
+        perror("bind failed"); 
+        exit(EXIT_FAILURE); 
+    } 
+
+
+    printf("starting server\n");
 
 
     std::vector<double> X = linspace(-1, 1);

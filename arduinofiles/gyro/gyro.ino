@@ -126,20 +126,6 @@ void loop() {
         
         IMU.readAcceleration(x, y, z);
 
-        servoxpos = map(x*100, -100,100, 0, 180);
-        servoypos = map(y*100, -100,100, 0, 180);
-        //Serial.println(servoxpos);
-
-        int servoxpos = shift_calc_avg(xavgbuf,servoxpos);
-        int servoypos = shift_calc_avg(yavgbuf,servoypos);
-
-        Serial.println(servoxpos);
-        servox.write(servoxpos);
-        servoy.write(servoypos);
-       
-    
-        
-
         char c = client.read();
         Serial.write(c);
         if(c == '#'){
@@ -156,7 +142,6 @@ void loop() {
         
         if(rcvbuffer.equals("gyrorequest")){
 
-      
           client.print('#');
           client.print(x);
           client.print(':');
@@ -172,6 +157,17 @@ void loop() {
           Serial.print(" ");
           Serial.println(z);
         }
+
+        int servoxpos = map(x*100, -100,100, 0, 180);
+        int servoypos = map(y*100, -100,100, 0, 180);
+        //Serial.println(servoxpos);
+
+        servoxpos = shift_calc_avg(xavgbuf,servoxpos);
+        servoypos = shift_calc_avg(yavgbuf,servoypos);
+
+        Serial.println(servoxpos);
+        servox.write(servoxpos);
+        servoy.write(servoypos);
 
         rcvbuffer = "\0";       
         delay(1);
