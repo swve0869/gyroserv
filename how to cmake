@@ -4,3 +4,4 @@ cmake -S <path to source> -B <path to build>
 
 https://www.ravbug.com/tutorials/cmake-easy/
 
+https://alandefreitas.github.io/matplotplusplus/integration/cmake/install-as-a-package-via-cmake/
