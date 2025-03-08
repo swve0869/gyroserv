@@ -93,29 +93,16 @@ void loop() {
   
   if (  udpsocket.begin(8000)) {
     Serial.println("udp socket started");
-   
     while (1) {
         IMU.readAcceleration(x, y, z);
-
+        char imumsg[100] = {'\0'};
+        String imustring = String(""); 
+        imustring += String(x) + ":" + String(y) + ":" + String(x); 
+        imustring.toCharArray(imumsg,100);
         udpsocket.beginPacket(server,8000);
-        udpsocket.write(x); //WiFiUDP.write(buffer, size);
+        udpsocket.write(imumsg,100);
         udpsocket.endPacket();
 
-        client.print('#');
-        client.print(x);
-        client.print(':');
-        client.print(y);
-        client.print(':');
-        client.print(z);
-        client.print(':');    
-        client.print('$');
-        
-        Serial.print(x);
-        Serial.print(" ");
-        Serial.print(y);
-        Serial.print(" ");
-        Serial.println(z);
-        
 
         int servoxpos = map(x*100, -100,100, 0, 180);
         int servoypos = map(y*100, -100,100, 0, 180);
@@ -124,7 +111,7 @@ void loop() {
         servoxpos = shift_calc_avg(xavgbuf,servoxpos);
         servoypos = shift_calc_avg(yavgbuf,servoypos);
 
-        Serial.println(servoxpos);
+        //Serial.println(servoxpos);
         servox.write(servoxpos);
         servoy.write(servoypos);
 

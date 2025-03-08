@@ -12,6 +12,7 @@
 #include <cmath>
 #include <matplot/matplot.h>
 #include <random>
+#include <chrono>
 
 using namespace matplot;
 
@@ -19,15 +20,22 @@ using namespace matplot;
 #define CLIENTPORT 80 
 #define MAXLINE 1024
 
-
 float range_convert(float oldval, float oldmin, float oldmax, float newmin, float newmax){
     return (((oldval - oldmin) * (newmax - newmin)) / (oldmax - oldmin)) + newmin;
 }
 
 int main(){
-    printf("startung udp");
+    printf("starting udp");
     struct sockaddr_in servaddr,cliaddr;
     int servsock;
+
+    // time tracking 
+    using std::chrono::high_resolution_clock;
+    using std::chrono::duration_cast;
+    using std::chrono::duration;
+    using std::chrono::milliseconds;
+    auto procstart = high_resolution_clock::now();
+    auto last_render = procstart;
 
     if ( (servsock = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
         perror("socket creation failed"); 
@@ -68,17 +76,18 @@ int main(){
         char buffer[MAXLINE] = { '\0' };
         int msg_flag = 0;
 
-        while(1){
-            socklen_t len;
-            int n; 
-            len = sizeof(cliaddr);  //len is value/result 
-            n = recvfrom(servsock, (char *)buffer, MAXLINE,  
-                        MSG_WAITALL, ( struct sockaddr *) &cliaddr, 
-                        &len); 
-            buffer[n] = '\0'; 
-            printf("Client : %s\n", buffer); 
+        
+        socklen_t len;
+        int n; 
+        len = sizeof(cliaddr);  //len is value/result 
+        n = recvfrom(servsock, buffer, MAXLINE,  
+                    MSG_WAITALL, 
+                    ( struct sockaddr *) &cliaddr, 
+                    &len); 
+        if(n > 0) {printf("%d, %s\n",n,buffer);  }
+        buffer[n] = '\0'; 
 
-        }
+        
         //send(clientSocket, message, strlen(message), 0);
         //sleep(1);
         //printf("Server: %s\n", buffer);
@@ -111,10 +120,15 @@ int main(){
             return x*xslope+ y*yslope ;
         }); 
 
-        //hold(on);
-        //cla();
-        auto l = surf(X, Y, Z);
-        f->draw();
+        
+        // timed render of positional graphic
+        auto current_time = high_resolution_clock::now();
+        auto ms_int = duration_cast<milliseconds> (current_time - last_render);
+        if (ms_int > std::chrono::milliseconds(100)){
+            auto l = surf(X, Y, Z);
+            f->draw();
+            last_render = high_resolution_clock::now();
+        }
     }
 
     return 0;
