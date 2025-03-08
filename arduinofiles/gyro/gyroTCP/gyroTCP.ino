@@ -1,20 +1,3 @@
-/*
-  WiFi Web Server
-
- A simple web server that shows the value of the analog input pins.
-
- This example is written for a network using WPA encryption. For
- WEP or WPA, change the Wifi.begin() call accordingly.
-
- Circuit:
- * Analog inputs attached to pins A0 through A5 (optional)
-
- created 13 July 2010
- by dlf (Metodo2 srl)
- modified 31 May 2012
- by Tom Igoe
-
- */
 
 #include <SPI.h>
 #include <WiFiNINA.h>

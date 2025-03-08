@@ -17,6 +17,8 @@ using namespace matplot;
 
 #define SERVPORT 8000
 #define CLIENTPORT 80 
+#define MAXLINE 1024
+
 
 float range_convert(float oldval, float oldmin, float oldmax, float newmin, float newmax){
     return (((oldval - oldmin) * (newmax - newmin)) / (oldmax - oldmin)) + newmin;
@@ -39,14 +41,13 @@ int main(){
     servaddr.sin_addr.s_addr = INADDR_ANY; 
     servaddr.sin_port = htons(SERVPORT); 
 
-    // Bind the socket with the server address 
+    // Bind the udp socket with the server address 
     if ( bind(servsock, (const struct sockaddr *)&servaddr,  
             sizeof(servaddr)) < 0 ) 
     { 
         perror("bind failed"); 
         exit(EXIT_FAILURE); 
     } 
-
 
     printf("starting server\n");
 
@@ -63,17 +64,20 @@ int main(){
 
     while(1){
         const char* message = "#gyrorequest$";
-        printf("a");
-        send(clientSocket, message, strlen(message), 0);
-        char buffer[1024] = { 0 };
-        printf("h");
+
+        char buffer[MAXLINE] = { '\0' };
         int msg_flag = 0;
+
         while(1){
-            char c = '\0';
-            recv(clientSocket, &c, 1, 0);
-            if(c == '#'){ continue; }
-            if(c == '$'){ break; }
-            strncat(buffer, &c, 1);
+            socklen_t len;
+            int n; 
+            len = sizeof(cliaddr);  //len is value/result 
+            n = recvfrom(servsock, (char *)buffer, MAXLINE,  
+                        MSG_WAITALL, ( struct sockaddr *) &cliaddr, 
+                        &len); 
+            buffer[n] = '\0'; 
+            printf("Client : %s\n", buffer); 
+
         }
         //send(clientSocket, message, strlen(message), 0);
         //sleep(1);
