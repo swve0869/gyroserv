@@ -1,3 +1,24 @@
+<<<<<<< HEAD:arduinofiles/gyro/gyroTCP/gyroTCP.ino
+=======
+/*
+  HEY these are those changes!
+  WiFi Web Server
+
+ A simple web server that shows the value of the analog input pins.
+
+ This example is written for a network using WPA encryption. For
+ WEP or WPA, change the Wifi.begin() call accordingly.
+
+ Circuit:
+ * Analog inputs attached to pins A0 through A5 (optional)
+
+ created 13 July 2010
+ by dlf (Metodo2 srl)
+ modified 31 May 2012
+ by Tom Igoe
+
+ */
+>>>>>>> 8118e70aa781bc9ca509c355e269f403eb37e52d:arduinofiles/gyro/gyro.ino
 
 #include <SPI.h>
 #include <WiFiNINA.h>

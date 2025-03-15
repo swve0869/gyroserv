@@ -17,7 +17,8 @@
 using namespace matplot;
 
 #define SERVPORT 8000
-#define CLIENTPORT 80 
+#define CLIENTADDR "10.160.0.86"
+#define CLIENTPORT 7000  
 #define MAXLINE 1024
 
 float range_convert(float oldval, float oldmin, float oldmax, float newmin, float newmax){
@@ -25,10 +26,7 @@ float range_convert(float oldval, float oldmin, float oldmax, float newmin, floa
 }
 
 int main(){
-    printf("starting udp");
-    struct sockaddr_in servaddr,cliaddr;
-    int servsock;
-
+    
     // time tracking 
     using std::chrono::high_resolution_clock;
     using std::chrono::duration_cast;
@@ -37,6 +35,9 @@ int main(){
     auto procstart = high_resolution_clock::now();
     auto last_render = procstart;
 
+    //udp socket initialization
+    struct sockaddr_in servaddr,cliaddr;
+    int servsock;
     if ( (servsock = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
         perror("socket creation failed"); 
         exit(EXIT_FAILURE); 
@@ -49,6 +50,11 @@ int main(){
     servaddr.sin_addr.s_addr = INADDR_ANY; 
     servaddr.sin_port = htons(SERVPORT); 
 
+    cliaddr.sin_family    = AF_INET; // IPv4 
+    cliaddr.sin_addr.s_addr = INADDR_ANY; 
+    cliaddr.sin_port = htons(CLIENTPORT); 
+    inet_pton(AF_INET, CLIENTADDR, &cliaddr.sin_addr); 
+
     // Bind the udp socket with the server address 
     if ( bind(servsock, (const struct sockaddr *)&servaddr,  
             sizeof(servaddr)) < 0 ) 
@@ -56,15 +62,12 @@ int main(){
         perror("bind failed"); 
         exit(EXIT_FAILURE); 
     } 
-
-    printf("starting server\n");
-
-
+    
+    // graphing vars
     std::vector<double> X = linspace(-1, 1);
     std::vector<double> Y = linspace(-1, 1);
     std::vector<double> Z = linspace(-1, 1);
     auto f = figure(true);
-    //surf(X, Y, Z);
     xlim({-1,1});
     ylim({-1,1});
     zlim({-1,1});
@@ -73,26 +76,30 @@ int main(){
     while(1){
         const char* message = "#gyrorequest$";
 
-        char buffer[MAXLINE] = { '\0' };
+        char rcvbuff[MAXLINE] = { '\0' };
         int msg_flag = 0;
 
-        
         socklen_t len;
         int n; 
         len = sizeof(cliaddr);  //len is value/result 
-        n = recvfrom(servsock, buffer, MAXLINE,  
+        n = recvfrom(servsock, rcvbuff, MAXLINE,  
                     MSG_WAITALL, 
                     ( struct sockaddr *) &cliaddr, 
                     &len); 
-        if(n > 0) {printf("%d, %s\n",n,buffer);  }
-        buffer[n] = '\0'; 
+        if(n > 0) {printf("%d, %s\n",n,rcvbuff);  }
 
+        char sndbuff[MAXLINE] = {'\0'};
+        strncat(sndbuff,"hello",4);
+        if(0 < sendto(servsock,sndbuff,4,0,(struct sockaddr *) &cliaddr, len)){
+            //printf("success\n");
+        }
+        
         
         //send(clientSocket, message, strlen(message), 0);
         //sleep(1);
         //printf("Server: %s\n", buffer);
         
-        char* xtok = strtok(buffer, ":");
+        char* xtok = strtok(rcvbuff, ":");
         char* ytok = strtok(nullptr, ":");
         char* ztok = strtok(nullptr, ":");
 
@@ -113,7 +120,7 @@ int main(){
         xslope = tan(xslope*pi/180);
         yslope = tan(yslope*pi/180); 
 
-        printf("Server: %f : %f : %f \n", xslope,yslope,zslope);
+        //printf("Server: %f : %f : %f \n", xslope,yslope,zslope);
 
         auto [X, Y] = meshgrid(linspace(-1, +1, 10), linspace(-1, +1, 10));
         auto Z = transform(X, Y, [&xslope,&yslope](double x, double y) {
