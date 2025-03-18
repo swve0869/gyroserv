@@ -2,8 +2,16 @@
 #include <SPI.h>
 #include <WiFiNINA.h>
 #include <Arduino_LSM6DS3.h>
+#include<Wire.h>
 #include <Servo.h>
+#include "Adafruit_MPU6050.h"
+#include "Adafruit_Sensor.h"
 #include "arduino_secrets.h" 
+#include<Wire.h>
+/* 
+const int MPU_addr = 0x68; // I2C address of the MPU-6050
+float xa, ya, za, roll, pitch; */
+//Adafruit_MPU6050 mpu;
 
 Servo servox;
 Servo servoy;
@@ -12,8 +20,8 @@ int servoxpin = 9;
 int servoypos = 90;
 int servoypin = 10;
 const int avgbufsize = 10;
-int xavgbuf[avgbufsize] = {90};
-int yavgbuf[avgbufsize] = {90};
+
+int MSGLEN = 200;
 
 int y_sh;
 double sp;
@@ -22,16 +30,19 @@ double sp;
 unsigned long last_time; 
 double total_e, last_e;
 double control_signal;
-int T = 5; 
-/* double kp = 1.25;    T =5 meh
-double ki = 0.093; 
+int T = 10; 
+/* double kp = 1.5;    T =5 ok 
+double ki = 0.125; 
 double kd = 50; */    
-int max_control = 900;
-int min_control = -900;
+int max_control = 90;
+int min_control = -90;
 
-double kp = 1.5;   
-double ki = 0.1; 
-double kd = 50; 
+double _integral = 0;
+double derivative = 0;
+
+double kp = 0.2;   
+double ki = 0.012; 
+double kd = 2; 
 
 char ssid[] = SECRET_SSID;        // your network SSID (name)
 char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
@@ -55,10 +66,25 @@ unsigned long previousMillis = 0;
 
 void setup() {
   //Initialize serial and wait for port to open:
+  /* Wire.begin();
+
+  Wire.beginTransmission(MPU_addr);
+  Wire.write(0x6B);  // PWR_MGMT_1 register
+  Wire.write(0);     // set to zero (wakes up the MPU-6050)
+  Wire.endTransmission(true);
+ */
   Serial.begin(9600);
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
+/* 
+  if (!mpu.begin()) {
+  Serial.println("Failed to find MPU6050 chip");
+  while (1);
+  }
+  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
+  mpu.setFilterBandwidth(MPU6050_BAND_21_HZ); */
 
 
   // init gyro
@@ -73,19 +99,13 @@ void setup() {
   // init servo
   servox.attach(10);
   servoy.attach(9);
+  servoy.write(90);
   if(servox.attached())
   {
     Serial.println("servox active");
   }else{
     Serial.println("failed");
   }
-
-
-  //calibrate sp to starting level
- /*  IMU.readAcceleration(x, y, z);
-  if(y > 0){y_sh = map(y*100,0,100,0,90);}
-  else{y_sh = map(y*100,-100,0,-90,0);};
-  sp = y_sh; */
 
 
   // check for the WiFi module:
@@ -109,7 +129,7 @@ void setup() {
   
 
   // attempt to connect to Wifi network:
-  while (status != WL_CONNECTED) {
+while (status != WL_CONNECTED) {
     Serial.print("Attempting to connect to SSID: ");
     Serial.println(ssid);
     // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
@@ -120,30 +140,46 @@ void setup() {
     delay(1000);
   }
   // you're connected now, so print out the status:
-  printWifiStatus(); 
+  printWifiStatus();  
 }
 
 
 void loop() { 
-  if (udpsocket.begin(7000)) { 
-    //Serial.println("udp socket started");
+  if (!udpsocket.begin(7000)) { 
+    while(1)Serial.println("udp socket failed");
+  } 
+
+    unsigned long last_time = millis();
+    unsigned long last_recv_time = millis();
     while (1) {
+        unsigned long current_time = millis();
         IMU.readAcceleration(x, y, z);
 
-        char imumsg[100] = {'\0'};
+
+        char imumsg[MSGLEN] = {'\0'};
         String imustring = String(""); 
         imustring += String(x) + ":" + String(y) + ":" + String(x); 
         imustring.toCharArray(imumsg,100);
         udpsocket.beginPacket(server,8000);
         udpsocket.write(imumsg,100);
-        udpsocket.endPacket(); 
+        udpsocket.endPacket();  
+      
 
-        int bytes = udpsocket.available();
-        bytes = udpsocket.parsePacket();
-        if(bytes){
-          char rcvbuffer[] = {'\0'};  
-          udpsocket.read(rcvbuffer,bytes);
-          Serial.println(rcvbuffer);
+        if(current_time - last_recv_time > 100){
+          int bytes = udpsocket.available();
+          bytes = udpsocket.parsePacket();
+          if(bytes){
+            char rcvbuff[MSGLEN] = {'\0'};  
+            udpsocket.read(rcvbuff,bytes);
+            //Serial.println(rcvbuffer);
+            String message = String(rcvbuff);
+            kp = String(strtok(rcvbuff,":")).toDouble();
+            ki = String(strtok(NULL,":")).toDouble();
+            kd = String(strtok(NULL,":")).toDouble();
+            T  = String(strtok(NULL,":")).toInt();
+            Serial.print("T:");Serial.println(T);
+          } 
+          last_recv_time = millis();
         }
 
 
@@ -160,12 +196,14 @@ void loop() {
         //double mappedy = map(y*100, -100,100, 0, 180);
         //int y_sh; // = y *100;
 
-        if(y > 0){y_sh = map(y*100,0,100,0,90);}
-        else{y_sh = map(y*100,-100,0,-90,0);};
+        //if(y > 0){y_sh = map(y*10,0,100,0,90);}
+        //else{y_sh = map(y*10,-100,0,-90,0);};
         //Serial.print(y); Serial.print(" : "); Serial.println(y_sh); 
 
+        y_sh = map(y*100,-100,100,-90,90);
 
-        unsigned long current_time = millis();
+
+        current_time = millis();
         int delta_time = current_time - last_time;
         if(delta_time >= T ){
           sp = 0; 
@@ -174,41 +212,40 @@ void loop() {
           total_e += e; // accumulates total error -> integral term
           if(total_e >= max_control){total_e = max_control; } // bounds checking
           else if(total_e <= min_control){total_e = min_control;}
-          
-          double delta_e = e - last_e; // difference of error -> derivative term;
 
-          control_signal = kp*e + (ki*T)*total_e + (kd/T)*delta_e; // + (ki*T)*total_e ; //PID control compute
+          _integral += e * T;
+          
+          derivative = (e - last_e)/T; // difference of error -> derivative term;
+
+          control_signal = kp*e + (ki)*_integral + (kd)*derivative; // + (ki*T)*total_e ; //PID control compute
 
           if (control_signal >= max_control) control_signal = max_control; // bounds checking
           else if (control_signal <= min_control) control_signal = min_control;
 
           last_e = e;
-          last_time = current_time;
 
-          if(millis()){//< 10000){
-
-/* 
-           Serial.print("y:");Serial.print(y_sh);Serial.print(" err: ");Serial.print(e);Serial.print("  control:");Serial.print(control_signal);
-          Serial.print("  deriv:");Serial.print((kd/T)*delta_e);Serial.print("  integ:"); Serial.print((ki*T)*total_e );
-          Serial.print("  servy: ");Serial.println(servoypos);}  */
+          if(true){//< 10000){
+          Serial.print("y:");Serial.print(y_sh);
+          Serial.print(" err: ");Serial.print(e);
+          Serial.print("  control:");Serial.print(control_signal);
+          Serial.print("  i:"); Serial.print((ki)*_integral);
+          Serial.print("  d:");Serial.println((kd)*derivative);  
           }
-          //Serial.println(control_signal);
 
-          servoypos = map(control_signal, -900,900, 0, 180);
-          //Serial.print("servy: ");Serial.println(servoypos);
+
+          servoypos = map(control_signal, -90,90, 0, 180);
+          //servoypos = control_signal;
 
           //servox.write(servoxpos);
           servoy.write(servoypos);
 
-          rcvbuffer = "\0";       
-          delay(1);
-      
+          last_time = current_time;
     
         }
 
-  }
+    }
 
-}
+  
 }
 
 //--------------------------------------------------------------

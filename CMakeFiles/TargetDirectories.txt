@@ -1,0 +1,3 @@
+/home/swami/Documents/csci/gyroserv/CMakeFiles/gyroserv.dir
+/home/swami/Documents/csci/gyroserv/CMakeFiles/edit_cache.dir
+/home/swami/Documents/csci/gyroserv/CMakeFiles/rebuild_cache.dir

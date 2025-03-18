@@ -13,20 +13,27 @@
 #include <matplot/matplot.h>
 #include <random>
 #include <chrono>
+//#include <gtkmm.h>
+//#include "mywindow.h"
+
 
 using namespace matplot;
 
 #define SERVPORT 8000
 #define CLIENTADDR "10.160.0.86"
 #define CLIENTPORT 7000  
-#define MAXLINE 1024
+#define MSGLEN 200
 
 float range_convert(float oldval, float oldmin, float oldmax, float newmin, float newmax){
     return (((oldval - oldmin) * (newmax - newmin)) / (oldmax - oldmin)) + newmin;
 }
 
-int main(){
+
+int main(int argc, char* argv[]){
     
+/*     auto app = Gtk::Application::create("org.gtkmm.examples.base");
+    return app->make_window_and_run<MyWindow>(argc, argv);  */
+
     // time tracking 
     using std::chrono::high_resolution_clock;
     using std::chrono::duration_cast;
@@ -34,6 +41,11 @@ int main(){
     using std::chrono::milliseconds;
     auto procstart = high_resolution_clock::now();
     auto last_render = procstart;
+
+    //pid control
+    double kp = 1;
+    double ki = .01;
+    double kd = 1;
 
     //udp socket initialization
     struct sockaddr_in servaddr,cliaddr;
@@ -76,29 +88,26 @@ int main(){
     while(1){
         const char* message = "#gyrorequest$";
 
-        char rcvbuff[MAXLINE] = { '\0' };
+        char rcvbuff[MSGLEN] = { '\0' };
+        char sndbuff[MSGLEN] = {'\0'};
         int msg_flag = 0;
-
         socklen_t len;
         int n; 
         len = sizeof(cliaddr);  //len is value/result 
-        n = recvfrom(servsock, rcvbuff, MAXLINE,  
-                    MSG_WAITALL, 
-                    ( struct sockaddr *) &cliaddr, 
-                    &len); 
+
+        // recv IMU data from arduino
+        n = recvfrom(servsock, rcvbuff, MSGLEN,  0, ( struct sockaddr *) &cliaddr, &len); 
         if(n > 0) {printf("%d, %s\n",n,rcvbuff);  }
 
-        char sndbuff[MAXLINE] = {'\0'};
-        strncat(sndbuff,"hello",4);
-        if(0 < sendto(servsock,sndbuff,4,0,(struct sockaddr *) &cliaddr, len)){
+        // send control data to arduino
+        sprintf(sndbuff,"%f:%f:%f",kp,ki,kd);
+        printf("sndbuf: %s ",sndbuff);
+        if(0 < sendto(servsock,sndbuff,MSGLEN,0,(struct sockaddr *) &cliaddr, len)){
             //printf("success\n");
         }
         
-        
-        //send(clientSocket, message, strlen(message), 0);
-        //sleep(1);
-        //printf("Server: %s\n", buffer);
-        
+
+
         char* xtok = strtok(rcvbuff, ":");
         char* ytok = strtok(nullptr, ":");
         char* ztok = strtok(nullptr, ":");
