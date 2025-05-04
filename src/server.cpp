@@ -19,7 +19,7 @@
 
 using namespace matplot;
 
-#define SERVPORT 8000
+#define SERVPORT 8005
 #define CLIENTADDR "10.160.0.86"
 #define CLIENTPORT 7000  
 #define MSGLEN 200

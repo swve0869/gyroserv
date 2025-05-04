@@ -20,7 +20,7 @@ sock.bind((UDP_IP, UDP_PORT))
    root.after(10, send_net)  """
 
 root = Tk()
-root.geometry("800x300")  
+root.geometry("500x500")  
 frm = ttk.Frame(root, padding=10)
 frm.grid()
 
@@ -28,6 +28,15 @@ kp = DoubleVar()
 kd = DoubleVar()
 ki = DoubleVar()
 T  = IntVar()
+
+f = open("default_pid_gains","r")
+vals = f.readline().split(":")
+kp.set(vals[0])
+ki.set(vals[1])
+kd.set(vals[2])
+T.set (vals[3])
+f.close() 
+
 
 def scale_change(value):
    """  global kp
@@ -58,10 +67,10 @@ kp_label = Label(frm, text = "Kp scaler").grid(column=0, row=2)
 # ki slider
 kp_scale = tk.Scale(frm,variable = ki,
                     from_ = 0.0, 
-                    to = 1.0,
+                    to = 0.01,
                     command = scale_change,
                     length = 400,
-                    resolution = .001,
+                    resolution = .0001,
                     orient=tk.HORIZONTAL).grid(column=0, row=3)
 kd_label = Label(frm, text = "Ki scaler").grid(column=0, row=4)
 
@@ -91,8 +100,9 @@ def save_gains():
     p = kp.get()
     i = ki.get()
     d = kd.get()
-    message = "gains:{:.4f}:{:.4f}:{:.4f}"
-    message = message.format(p,i,d)
+    t = T.get()
+    message = "{:.4f}:{:.4f}:{:.4f}:{:}"
+    message = message.format(p,i,d,t)
     f.write(message)
     f.close() 
 set_gains_button = tk.Button(

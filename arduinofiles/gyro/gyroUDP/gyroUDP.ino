@@ -154,18 +154,20 @@ void loop() {
     while (1) {
         unsigned long current_time = millis();
         IMU.readAcceleration(x, y, z);
-
-
-        char imumsg[MSGLEN] = {'\0'};
-        String imustring = String(""); 
-        imustring += String(x) + ":" + String(y) + ":" + String(x); 
-        imustring.toCharArray(imumsg,100);
-        udpsocket.beginPacket(server,8000);
-        udpsocket.write(imumsg,100);
-        udpsocket.endPacket();  
       
 
         if(current_time - last_recv_time > 100){
+
+          char imumsg[MSGLEN] = {'\0'};
+          String imustring = String(""); 
+          imustring += String(x) + ":" + String(y) + ":" + String(x); 
+          imustring.toCharArray(imumsg,100);
+          udpsocket.beginPacket(server,8005);
+          udpsocket.write(imumsg,100);
+          udpsocket.endPacket();  
+
+          delay(10);
+
           int bytes = udpsocket.available();
           bytes = udpsocket.parsePacket();
           if(bytes){
@@ -224,7 +226,7 @@ void loop() {
 
           last_e = e;
 
-          if(true){//< 10000){
+          if(false){//< 10000){
           Serial.print("y:");Serial.print(y_sh);
           Serial.print(" err: ");Serial.print(e);
           Serial.print("  control:");Serial.print(control_signal);
